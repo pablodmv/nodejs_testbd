@@ -2,21 +2,50 @@ var express    = require("express");
 var mysql      = require('mysql');
 
 
-var connection = mysql.createConnection({
+
+
+
+
+var pool = mysql.createPool({
+  conectionLimit: 100,
   host     : 'localhost',
   user     : 'root',
   password : 'root',
-  database : 'world'
+  database : 'world',
+  debug    : false
 });
-var app = express();
+//var app = express();
 
-connection.connect(function(err){
-if(!err) {
-    console.log("Database is connected ... nn");
-} else {
-    console.log("Error connecting database ... nn");
+
+function handle_database(req,res) {
+
+    pool.getConnection(function(err,connection){
+        if (err) {
+          res.json({"code" : 100, "status" : "Error in connection database"});
+          return;
+        }
+
+        console.log('connected as id ' + connection.threadId);
+
+      connection.query('SELECT * from city', function(err, rows, fields) {
+            connection.release();
+            if(!err) {
+                res.json(rows);
+            }
+        });
+
+        connection.on('error', function(err) {
+              res.json({"code" : 100, "status" : "Error in connection database"});
+              return;
+        });
+  });
 }
-});
+
+
+
+
+
+
 
 
 
@@ -28,15 +57,8 @@ exports.home = function(req, res) {
     "Title" : "Hola mundo!",
   }];
 
-  connection.query('SELECT * from city', function(err, rows, fields) {
-    if (!err)
-      console.log('The solution is: ', rows);
-    else
-      console.log('Error while performing Query.');
-  });
+handle_database(req, res);
 
-  connection.end();
 
-  
- res.send(objMenu);
+ //res.send(objMenu);
 };
